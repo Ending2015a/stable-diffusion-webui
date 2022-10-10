@@ -61,17 +61,17 @@ printf "\e[1m\e[34mTested on Debian 11 (Bullseye)\e[0m"
 printf "\n%s\n" "${delimiter}"
 
 # Do not run as root
-if [[ $(id -u) -eq 0 ]]
-then
-    printf "\n%s\n" "${delimiter}"
-    printf "\e[1m\e[31mERROR: This script must not be launched as root, aborting...\e[0m"
-    printf "\n%s\n" "${delimiter}"
-    exit 1
-else
-    printf "\n%s\n" "${delimiter}"
-    printf "Running on \e[1m\e[32m%s\e[0m user" "$(whoami)"
-    printf "\n%s\n" "${delimiter}"
-fi
+#if [[ $(id -u) -eq 0 ]]
+#then
+#    printf "\n%s\n" "${delimiter}"
+#    printf "\e[1m\e[31mERROR: This script must not be launched as root, aborting...\e[0m"
+#    printf "\n%s\n" "${delimiter}"
+#    exit 1
+#else
+#    printf "\n%s\n" "${delimiter}"
+#    printf "Running on \e[1m\e[32m%s\e[0m user" "$(whoami)"
+#    printf "\n%s\n" "${delimiter}"
+#fi
 
 if [[ -d .git ]]
 then
@@ -83,47 +83,47 @@ then
 fi
 
 # Check prequisites
-for preq in git python3
-do
-    if ! hash "${preq}" &>/dev/null
-    then
-        printf "\n%s\n" "${delimiter}"
-        printf "\e[1m\e[31mERROR: %s is not installed, aborting...\e[0m" "${preq}"
-        printf "\n%s\n" "${delimiter}"
-        exit 1
-    fi
-done
+#for preq in git python3
+#do
+#    if ! hash "${preq}" &>/dev/null
+#    then
+#        printf "\n%s\n" "${delimiter}"
+#        printf "\e[1m\e[31mERROR: %s is not installed, aborting...\e[0m" "${preq}"
+#        printf "\n%s\n" "${delimiter}"
+#        exit 1
+#    fi
+#done
 
-if ! "${python_cmd}" -c "import venv" &>/dev/null
-then
-    printf "\n%s\n" "${delimiter}"
-    printf "\e[1m\e[31mERROR: python3-venv is not installed, aborting...\e[0m"
-    printf "\n%s\n" "${delimiter}"
-    exit 1
-fi
+#if ! "${python_cmd}" -c "import venv" &>/dev/null
+#then
+#    printf "\n%s\n" "${delimiter}"
+#    printf "\e[1m\e[31mERROR: python3-venv is not installed, aborting...\e[0m"
+#    printf "\n%s\n" "${delimiter}"
+#    exit 1
+#fi
 
-printf "\n%s\n" "${delimiter}"
-printf "Clone or update stable-diffusion-webui"
-printf "\n%s\n" "${delimiter}"
-cd "${install_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/, aborting...\e[0m" "${install_dir}"; exit 1; }
-if [[ -d "${clone_dir}" ]]
-then
-    cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
-    "${GIT}" pull
-else
-    "${GIT}" clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git "${clone_dir}"
-    cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
-fi
+#printf "\n%s\n" "${delimiter}"
+#printf "Clone or update stable-diffusion-webui"
+#printf "\n%s\n" "${delimiter}"
+#cd "${install_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/, aborting...\e[0m" "${install_dir}"; exit 1; }
+#if [[ -d "${clone_dir}" ]]
+#then
+#    cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
+#    "${GIT}" pull
+#else
+#    "${GIT}" clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git "${clone_dir}"
+#    cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
+#fi
 
-printf "\n%s\n" "${delimiter}"
-printf "Create and activate python venv"
-printf "\n%s\n" "${delimiter}"
-cd "${install_dir}"/"${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
-if [[ ! -d "${venv_dir}" ]]
-then
-    "${python_cmd}" -m venv "${venv_dir}"
-    first_launch=1
-fi
+#printf "\n%s\n" "${delimiter}"
+#printf "Create and activate python venv"
+#printf "\n%s\n" "${delimiter}"
+#cd "${install_dir}"/"${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
+#if [[ ! -d "${venv_dir}" ]]
+#then
+#    "${python_cmd}" -m venv "${venv_dir}"
+#    first_launch=1
+#fi
 # shellcheck source=/dev/null
 if [[ -f "${venv_dir}"/bin/activate ]]
 then

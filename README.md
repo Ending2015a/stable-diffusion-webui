@@ -5,6 +5,15 @@ A browser interface based on Gradio library for Stable Diffusion.
 
 Check the [custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts) wiki page for extra scripts developed by users.
 
+
+## Install (Ending2015a)
+
+```
+virtualenv --python=python3.7 nai_env
+source nai_env/bin/activate
+pip install torch==1.12.1+cu113 torchvision=0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
+```
+
 ## Features
 [Detailed feature showcase with images](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Features):
 - Original txt2img and img2img modes
