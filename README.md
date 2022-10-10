@@ -8,11 +8,19 @@ Check the [custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-web
 
 ## Install (Ending2015a)
 
-```
+
+```bash
+# create virtual env
 virtualenv --python=python3.7 nai_env
 source nai_env/bin/activate
+
+# install pytorch with cuda
 pip install torch==1.12.1+cu113 torchvision=0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 export CUDA_VISIBLE_DEVICES='0,1,2'
+
+# set your {user}:{password}. separate with ',' for multiple users
+echo "user1:pass1,user2:pass2" > .SECRET
+# start server
 ./webui.sh
 ```
 
