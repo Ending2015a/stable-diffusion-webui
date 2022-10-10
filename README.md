@@ -12,6 +12,8 @@ Check the [custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-web
 virtualenv --python=python3.7 nai_env
 source nai_env/bin/activate
 pip install torch==1.12.1+cu113 torchvision=0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
+export CUDA_VISIBLE_DEVICES='0,1,2'
+./webui.sh
 ```
 
 ## Features
