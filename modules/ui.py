@@ -41,6 +41,240 @@ from modules.images import save_image
 import modules.textual_inversion.ui
 import modules.hypernetworks.ui
 
+
+
+# send image to szurubooru
+import magic
+import requests
+from requests.auth import HTTPBasicAuth
+from requests_toolbelt import MultipartEncoder
+from typing import Optional, Union
+
+if cmd_opts.szurubooru is not None and cmd_opts.szurubooru_auth is not None:
+    print('Create Szurubooru authorization token')
+    USERNAME, PASSWORD = cmd_opts.szurubooru_auth.split(':')
+    USERNAME = USERNAME.strip()
+    PASSWORD = PASSWORD.strip()
+
+    AUTH = HTTPBasicAuth(USERNAME, PASSWORD)
+    HEADERS = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    DEFAULT_URL = os.path.join(cmd_opts.szurubooru, 'api')
+
+    print(USERNAME, PASSWORD, DEFAULT_URL)
+else:
+    AUTH = None
+    HEADERS = None
+    DEFAULT_URL = None
+
+def request(method: str, path: str, headers=HEADERS, auth=AUTH, **kwargs):
+    '''
+    Send request
+
+    Args:
+        method: (str) request method ['GET', 'POST', 'PUT', 'DELETE']
+        path: (str) request url, e.g. http://your.szurubooru.com/api{/path}
+        headers: (dict)
+        auth:
+
+    Returns:
+        response object
+    '''
+
+    # http://.../api + path
+    if not path.startswith('/'):
+        path = '/'+path
+
+    path_ = DEFAULT_URL + path
+
+    #r = requests.Request(method, path_, headers=headers, auth=auth, **kwargs)
+    #print(r.prepare().body)
+
+    r = requests.request(method, path_, headers=headers, auth=auth, **kwargs)
+    r.encoding = 'utf-8'
+
+    # raise exception if returned status code does not equal to 200
+    if r.status_code != 200:
+        raise Exception('status code: {}\nmessage: {}'.format(r.status_code, r.json()))
+
+    return r
+
+def get_post(post: int):
+    '''
+    Get post information
+
+    Args:
+        post: (int) post id
+
+    Returns:
+        (dict) json object
+    '''
+    assert isinstance(post, int)
+    r = request('GET', '/post/{}'.format(post))
+
+    j = json.loads(r.text)
+
+    return j
+
+
+def upload_image(content):
+    '''
+    Upload temporary image
+
+    Args:
+        content: (file pointer) fp
+
+    Returns:
+        (dict) json object
+    '''
+
+    # === make data ===
+    query_data = MultipartEncoder({'content': ('anonymous.png', content, 'image/png'),
+                                   'metadata': ('blob', '{}', 'application/octet-stream')})
+
+    # === make header ===
+    headers = dict(HEADERS)
+    headers['Content-Type'] = query_data.content_type
+
+    # === send request ===
+    r = request('POST', '/uploads', data=query_data.to_string(),
+                                    headers=headers)
+
+    j = json.loads(r.text)
+
+    return j
+
+def create_post(tags: Optional[Union[list, tuple]] = None, 
+               safety: Optional[str] =None, 
+               source: Optional[str] =None, 
+               relations: Optional[Union[list, tuple]]=None,
+               notes: Optional[Union[list, tuple]]=None,
+               flags: Optional[Union[list, tuple]]=None,
+               anonymous: Optional[bool] = None,
+               content: Optional[str] =None, # io buffer
+               thumbnail: Optional[str] =None):
+    '''
+    Create a new post
+
+    Args:
+        version: (int) current version of the post, leave it None if you don't know
+        tags: (list, tuple) a list or tuple of str
+        safety:
+        source:
+        relations:
+        notes:
+        flags:
+        content: (str) the file path for the content
+        thumbnail: (str) the file path for the thumbnail
+
+    Returns:
+        reponse object
+    '''
+    query_data = {}
+
+    # === update post informations ===
+
+    if tags is not None:
+        assert isinstance(tags, (list, tuple))
+        query_data['tags'] = tags
+    else:
+        query_data['tags'] = []
+
+    if safety is not None:
+        assert safety in ['safe', 'sketchy', 'unsafe']
+        query_data['safety'] = safety
+    else:
+        # default set to unsafe
+        query_data['safety'] = 'safe'
+
+    if source is not None:
+        assert isinstance(source, str)
+        query_data['source'] = source
+
+    if relations is not None:
+        assert isinstance(relations, (list, tuple, set))
+        relations = list(set(relations))  # unique elements
+
+        # delete self
+        if post in relations:
+            relations.remove(post)
+
+        query_data['relations'] = relations
+
+    if notes is not None:
+        assert isinstance(notes, (list, tuple))
+
+        query_data['notes'] = notes
+
+    if flags is not None:
+        assert isinstance(flags, (list, tuple))
+
+        query_data['flags'] = flags
+
+    if anonymous is not None:
+        query_data['anonymous'] = anonymous
+
+    # === upload post contents ===
+
+    if content is not None:
+        j = upload_image(content)
+
+        query_data['contentToken'] = j['token']
+
+
+    if thumbnail is not None:
+        assert isinstance(thumbnail, str),'thumbnail must be the path of the file'
+
+        j = upload_image(thumbnail)
+
+        query_data['thumbnailToken'] = j['token']
+    
+
+    # === send request ===
+    if len(query_data) > 1:
+        r = request('POST', '/posts/', data=json.dumps(query_data).encode('utf-8'))
+
+    j = json.loads(r.text)
+    return j
+
+def post_comment(post: int, text: str):
+    '''
+    Post a comment to an existing post
+    
+    Args:
+        post: (int) post id
+        comment: (str) comment to post
+        
+    Returns:
+        response object
+    '''
+    
+    r = request('POST', '/comments/', data=json.dumps({
+        'text': text,
+        'postId': str(post)}).encode('utf-8')
+        )
+    return r
+
+def send_to_szurubooru(images, prompt):
+    try:
+        
+        for filedata in images:
+            if filedata.startswith("data:image/png;base64,"):
+                filedata = filedata[len("data:image/png;base64,"):]
+            
+            image = Image.open(io.BytesIO(base64.decodebytes(filedata.encode('utf-8'))))
+
+            with io.BytesIO() as fp:
+                image.save(fp, format='PNG')
+                fp.seek(0)
+                j = create_post(tags=[USERNAME], content=fp)
+                post_id = j['id']
+                post_comment(post_id, prompt)
+    except Exception as e:
+        print('Exception ', str(e))
+
 # this is a fix for Windows users. Without it, javascript files will be served with text/html content-type and the browser will not show any UI
 mimetypes.init()
 mimetypes.add_type('application/javascript', '.js')
@@ -119,6 +353,10 @@ def save_files(js_data, images, do_make_zip, index):
                     setattr(self, key, value)
 
     data = json.loads(js_data)
+
+    # Ending2015a: Click save button send image to szurubooru
+    if cmd_opts.szurubooru is not None and cmd_opts.szurubooru_auth is not None:
+        send_to_szurubooru(images, data['prompt'])
 
     p = MyObject(data)
     path = opts.outdir_save

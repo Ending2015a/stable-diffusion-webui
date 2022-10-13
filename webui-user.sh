@@ -10,7 +10,7 @@ install_dir="/home/$(whoami)/dev/empty"
 clone_dir="stable-diffusion-webui"
 
 # Commandline arguments for webui.py, for example: export COMMANDLINE_ARGS="--medvram --opt-split-attention"
-export COMMANDLINE_ARGS="--listen --port $(cat .PORT) --gradio-auth $(cat .SECRET)"
+export COMMANDLINE_ARGS="--listen --port $(cat .PORT) --gradio-auth $(cat .SECRET) --szurubooru $(cat .SZURUBOORU_ADDR) --szurubooru-auth $(cat .SZURUBOORU_AUTH)"
 
 # python3 executable
 #python_cmd="python3"

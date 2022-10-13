@@ -73,6 +73,9 @@ parser.add_argument("--enable-console-prompts", action='store_true', help="print
 parser.add_argument('--vae-path', type=str, help='Path to Variational Autoencoders model', default=None)
 parser.add_argument("--disable-safe-unpickle", action='store_true', help="disable checking pytorch models for malicious code", default=False)
 
+# Ending2015a
+parser.add_argument("--szurubooru", type=str, help='Address to szuruboor', default=None)
+parser.add_argument("--szurubooru-auth", type=str, help='authentication', default=None)
 
 cmd_opts = parser.parse_args()
 

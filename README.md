@@ -22,6 +22,11 @@ export CUDA_VISIBLE_DEVICES='0,1,2'
 echo "user1:pass1,user2:pass2" > .SECRET
 # set your port
 echo "1234" > .PORT
+# set your szurubooru-auth
+echo "{username}:{password}" > .SZURUBOORU_AUTH
+# set your szurubooru address
+echo "{ip}" > .SZURUBOORU_ADDR
+
 # start server
 ./webui.sh
 ```
