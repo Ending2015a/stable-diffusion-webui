@@ -400,7 +400,8 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
             for k, v in existing_info.items():
                 pnginfo.add_text(k, str(v))
 
-        pnginfo.add_text(pnginfo_section_name, info)
+        # ending2015a: this would write Parameters info into the png file
+        #pnginfo.add_text(pnginfo_section_name, info)
     else:
         pnginfo = None
 
@@ -430,7 +431,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
     def exif_bytes():
         return piexif.dump({
             "Exif": {
-                piexif.ExifIFD.UserComment: piexif.helper.UserComment.dump(info or "", encoding="unicode")
+                piexif.ExifIFD.UserComment: piexif.helper.UserComment.dump("", encoding="unicode")
             },
         })
 

@@ -451,7 +451,9 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
 
                 text = infotext(n, i)
                 infotexts.append(text)
-                image.info["parameters"] = text
+                
+                # ending2015a: this would write Parameters info into the png file
+                #image.info["parameters"] = text
                 output_images.append(image)
 
             del x_samples_ddim 
@@ -470,7 +472,9 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             if opts.return_grid:
                 text = infotext()
                 infotexts.insert(0, text)
-                grid.info["parameters"] = text
+                
+                # ending2015a: this would write Parameters info into the png file
+                #grid.info["parameters"] = text
                 output_images.insert(0, grid)
                 index_of_first_image = 1
 

@@ -4,13 +4,13 @@
 #########################################################
 
 # Install directory without trailing slash
-#install_dir="/home/$(whoami)/dev"
+install_dir="/home/$(whoami)/dev/empty"
 
 # Name of the subdirectory
 clone_dir="stable-diffusion-webui"
 
 # Commandline arguments for webui.py, for example: export COMMANDLINE_ARGS="--medvram --opt-split-attention"
-export COMMANDLINE_ARGS="--listen --gradio-auth $(cat .SECRET)"
+export COMMANDLINE_ARGS="--listen --port $(cat .PORT) --gradio-auth $(cat .SECRET)"
 
 # python3 executable
 #python_cmd="python3"
