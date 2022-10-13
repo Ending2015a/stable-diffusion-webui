@@ -256,5 +256,11 @@
     "extras/CodeFormer weight (0 = maximum effect, 1 = minimum effect)/value": 0,
     "extras/CodeFormer weight (0 = maximum effect, 1 = minimum effect)/minimum": 0.0,
     "extras/CodeFormer weight (0 = maximum effect, 1 = minimum effect)/maximum": 1.0,
-    "extras/CodeFormer weight (0 = maximum effect, 1 = minimum effect)/step": 0.001
+    "extras/CodeFormer weight (0 = maximum effect, 1 = minimum effect)/step": 0.001,
+    "extras/Width/visible": true,
+    "extras/Width/value": 512,
+    "extras/Height/visible": true,
+    "extras/Height/value": 512,
+    "extras/Crop to fit/visible": true,
+    "extras/Crop to fit/value": true
 }
