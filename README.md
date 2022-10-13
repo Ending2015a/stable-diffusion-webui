@@ -20,6 +20,8 @@ export CUDA_VISIBLE_DEVICES='0,1,2'
 
 # set your {user}:{password}. separate with ',' for multiple users
 echo "user1:pass1,user2:pass2" > .SECRET
+# set your port
+echo "1234" > .PORT
 # start server
 ./webui.sh
 ```
