@@ -88,15 +88,10 @@ class EmbeddingDatabase:
 
             data = []
 
-<<<<<<< HEAD
-            if filename.upper().endswith('.PNG'):
-                embed_image = Image.open(path)
-                if 'sd-ti-embedding' in embed_image.text:
-=======
+
             if os.path.splitext(filename.upper())[-1] in ['.PNG', '.WEBP', '.JXL', '.AVIF']:
                 embed_image = Image.open(path)
                 if hasattr(embed_image, 'text') and 'sd-ti-embedding' in embed_image.text:
->>>>>>> AUTOMATIC1111-master
                     data = embedding_from_b64(embed_image.text['sd-ti-embedding'])
                     name = data.get('name', name)
                 else:
@@ -186,10 +181,7 @@ def create_embedding(name, num_vectors_per_token, overwrite_old, init_text='*'):
     return fn
 
 
-<<<<<<< HEAD
-def train_embedding(embedding_name, learn_rate, data_root, log_directory, training_width, training_height, steps, create_image_every, save_embedding_every, template_file, save_image_with_stored_embedding, preview_image_prompt):
-    assert embedding_name, 'embedding not selected'
-=======
+
 def write_loss(log_directory, filename, step, epoch_len, values):
     if shared.opts.training_write_csv_every == 0:
         return
@@ -238,7 +230,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
     save_embedding_every = save_embedding_every or 0
     create_image_every = create_image_every or 0
     validate_train_inputs(embedding_name, learn_rate, batch_size, data_root, template_file, steps, save_embedding_every, create_image_every, log_directory, name="embedding")
->>>>>>> AUTOMATIC1111-master
 
     shared.state.textinfo = "Initializing textual inversion training..."
     shared.state.job_count = steps
@@ -265,25 +256,16 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
         os.makedirs(images_embeds_dir, exist_ok=True)
     else:
         images_embeds_dir = None
-<<<<<<< HEAD
-        
-    cond_model = shared.sd_model.cond_stage_model
 
-    shared.state.textinfo = f"Preparing dataset from {html.escape(data_root)}..."
-    with torch.autocast("cuda"):
-        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared.opts.training_image_repeats_per_epoch, placeholder_token=embedding_name, model=shared.sd_model, device=devices.device, template_file=template_file)
-=======
 
     cond_model = shared.sd_model.cond_stage_model
->>>>>>> AUTOMATIC1111-master
 
     hijack = sd_hijack.model_hijack
 
     embedding = hijack.embedding_db.word_embeddings[embedding_name]
     checkpoint = sd_models.select_checkpoint()
 
-<<<<<<< HEAD
-=======
+
     ititial_step = embedding.step or 0
     if ititial_step >= steps:
         shared.state.textinfo = f"Model has already been trained beyond specified max steps"
@@ -301,7 +283,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
     embedding.vec.requires_grad = True
     optimizer = torch.optim.AdamW([embedding.vec], lr=scheduler.learn_rate)
 
->>>>>>> AUTOMATIC1111-master
     losses = torch.zeros((32,))
 
     last_saved_file = "<none>"
@@ -313,11 +294,8 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
     optimizer = torch.optim.AdamW([embedding.vec], lr=scheduler.learn_rate)
 
     pbar = tqdm.tqdm(enumerate(ds), total=steps-ititial_step)
-<<<<<<< HEAD
-    for i, entry in pbar:
-=======
+
     for i, entries in pbar:
->>>>>>> AUTOMATIC1111-master
         embedding.step = i + ititial_step
 
         scheduler.apply(optimizer, embedding.step)
@@ -328,16 +306,10 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
             break
 
         with torch.autocast("cuda"):
-<<<<<<< HEAD
-            c = cond_model([entry.cond_text])
 
-            x = entry.latent.to(devices.device)
-            loss = shared.sd_model(x.unsqueeze(0), c)[0]
-=======
             c = cond_model([entry.cond_text for entry in entries])
             x = torch.stack([entry.latent for entry in entries]).to(devices.device)
             loss = shared.sd_model(x, c)[0]
->>>>>>> AUTOMATIC1111-master
             del x
 
             losses[embedding.step % losses.shape[0]] = loss.item()
@@ -346,12 +318,7 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
             loss.backward()
             optimizer.step()
 
-<<<<<<< HEAD
-        epoch_num = embedding.step // len(ds)
-        epoch_step = embedding.step - (epoch_num * len(ds)) + 1
 
-        pbar.set_description(f"[Epoch {epoch_num}: {epoch_step}/{len(ds)}]loss: {losses.mean():.7f}")
-=======
         steps_done = embedding.step + 1
 
         epoch_num = embedding.step // len(ds)
@@ -370,7 +337,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
             "loss": f"{losses.mean():.7f}",
             "learn_rate": scheduler.learn_rate
         })
->>>>>>> AUTOMATIC1111-master
 
         if images_dir is not None and steps_done % create_image_every == 0:
             forced_filename = f'{embedding_name}-{steps_done}'
@@ -382,13 +348,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
 
             p = processing.StableDiffusionProcessingTxt2Img(
                 sd_model=shared.sd_model,
-<<<<<<< HEAD
-                prompt=preview_text,
-                steps=20,
-                height=training_height,
-                width=training_width,
-=======
->>>>>>> AUTOMATIC1111-master
                 do_not_save_grid=True,
                 do_not_save_samples=True,
                 do_not_reload_embeddings=True,
@@ -418,30 +377,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
                 shared.sd_model.first_stage_model.to(devices.cpu)
 
             shared.state.current_image = image
-<<<<<<< HEAD
-
-            if save_image_with_stored_embedding and os.path.exists(last_saved_file):
-
-                last_saved_image_chunks = os.path.join(images_embeds_dir, f'{embedding_name}-{embedding.step}.png')
-
-                info = PngImagePlugin.PngInfo()
-                data = torch.load(last_saved_file)
-                info.add_text("sd-ti-embedding", embedding_to_b64(data))
-
-                title = "<{}>".format(data.get('name', '???'))
-                checkpoint = sd_models.select_checkpoint()
-                footer_left = checkpoint.model_name
-                footer_mid = '[{}]'.format(checkpoint.hash)
-                footer_right = '{}'.format(embedding.step)
-
-                captioned_image = caption_image_overlay(image, title, footer_left, footer_mid, footer_right)
-                captioned_image = insert_image_data_embed(captioned_image, data)
-
-                captioned_image.save(last_saved_image_chunks, "PNG", pnginfo=info)
-
-            image.save(last_saved_image)
-
-=======
 
             if save_image_with_stored_embedding and os.path.exists(last_saved_file) and embedding_yet_to_be_embedded:
 
@@ -470,7 +405,6 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
                 embedding_yet_to_be_embedded = False
 
             last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
->>>>>>> AUTOMATIC1111-master
             last_saved_image += f", prompt: {preview_text}"
 
         shared.state.job_no = embedding.step
@@ -479,11 +413,7 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
 <p>
 Loss: {losses.mean():.7f}<br/>
 Step: {embedding.step}<br/>
-<<<<<<< HEAD
-Last prompt: {html.escape(entry.cond_text)}<br/>
-=======
 Last prompt: {html.escape(entries[0].cond_text)}<br/>
->>>>>>> AUTOMATIC1111-master
 Last saved embedding: {html.escape(last_saved_file)}<br/>
 Last saved image: {html.escape(last_saved_image)}<br/>
 </p>
@@ -494,8 +424,7 @@ Last saved image: {html.escape(last_saved_image)}<br/>
     shared.sd_model.first_stage_model.to(devices.device)
 
     return embedding, filename
-<<<<<<< HEAD
-=======
+
 
 def save_embedding(embedding, checkpoint, embedding_name, filename, remove_cached_checksum=True):
     old_embedding_name = embedding.name
@@ -515,4 +444,3 @@ def save_embedding(embedding, checkpoint, embedding_name, filename, remove_cache
         embedding.name = old_embedding_name
         embedding.cached_checksum = old_cached_checksum
         raise
->>>>>>> AUTOMATIC1111-master
