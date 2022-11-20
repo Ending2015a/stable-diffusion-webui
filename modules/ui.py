@@ -187,7 +187,7 @@ def create_post(tags: Optional[Union[list, tuple]] = None,
         query_data['safety'] = safety
     else:
         # default set to unsafe
-        query_data['safety'] = 'safe'
+        query_data['safety'] = 'unsafe'
 
     if source is not None:
         assert isinstance(source, str)
