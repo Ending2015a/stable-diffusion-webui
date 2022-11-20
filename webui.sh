@@ -124,6 +124,7 @@ fi
 #    "${python_cmd}" -m venv "${venv_dir}"
 #    first_launch=1
 #fi
+
 # shellcheck source=/dev/null
 if [[ -f "${venv_dir}"/bin/activate ]]
 then
@@ -135,7 +136,15 @@ else
     exit 1
 fi
 
-printf "\n%s\n" "${delimiter}"
-printf "Launching launch.py..."
-printf "\n%s\n" "${delimiter}"
-"${python_cmd}" "${LAUNCH_SCRIPT}"
+if [[ ! -z "${ACCELERATE}" ]] && [ ${ACCELERATE}="True" ] && [ -x "$(command -v accelerate)" ]
+then
+    printf "\n%s\n" "${delimiter}"
+    printf "Accelerating launch.py..."
+    printf "\n%s\n" "${delimiter}"
+    accelerate launch --num_cpu_threads_per_process=6 "${LAUNCH_SCRIPT}" "$@"
+else
+    printf "\n%s\n" "${delimiter}"
+    printf "Launching launch.py..."
+    printf "\n%s\n" "${delimiter}"
+    "${python_cmd}" "${LAUNCH_SCRIPT}" "$@"
+fi

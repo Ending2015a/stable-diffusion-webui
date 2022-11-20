@@ -14,17 +14,20 @@ from modules.sd_hijack_optimizations import invokeAI_mps_available
 
 import ldm.modules.attention
 import ldm.modules.diffusionmodules.model
+import ldm.models.diffusion.ddim
+import ldm.models.diffusion.plms
 
 attention_CrossAttention_forward = ldm.modules.attention.CrossAttention.forward
 diffusionmodules_model_nonlinearity = ldm.modules.diffusionmodules.model.nonlinearity
 diffusionmodules_model_AttnBlock_forward = ldm.modules.diffusionmodules.model.AttnBlock.forward
+
 
 def apply_optimizations():
     undo_optimizations()
 
     ldm.modules.diffusionmodules.model.nonlinearity = silu
 
-    if cmd_opts.force_enable_xformers or (cmd_opts.xformers and shared.xformers_available and torch.version.cuda and (6, 0) <= torch.cuda.get_device_capability(shared.device) <= (8, 6)):
+    if cmd_opts.force_enable_xformers or (cmd_opts.xformers and shared.xformers_available and torch.version.cuda and (6, 0) <= torch.cuda.get_device_capability(shared.device) <= (9, 0)):
         print("Applying xformers cross attention optimization.")
         ldm.modules.attention.CrossAttention.forward = sd_hijack_optimizations.xformers_attention_forward
         ldm.modules.diffusionmodules.model.AttnBlock.forward = sd_hijack_optimizations.xformers_attnblock_forward
@@ -92,6 +95,10 @@ class StableDiffusionModelHijack:
         model_embeddings = m.cond_stage_model.transformer.text_model.embeddings
         if type(model_embeddings.token_embedding) == EmbeddingsWithFixes:
             model_embeddings.token_embedding = model_embeddings.token_embedding.wrapped
+
+        self.apply_circular(False)
+        self.layers = None
+        self.clip = None
 
     def apply_circular(self, enable):
         if self.circular_enabled == enable:
@@ -167,11 +174,12 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
 
                     remade_tokens = remade_tokens[:last_comma]
                     length = len(remade_tokens)
-                    
+
+
                     rem = int(math.ceil(length / 75)) * 75 - length
                     remade_tokens += [id_end] * rem + reloc_tokens
                     multipliers = multipliers[:last_comma] + [1.0] * rem + reloc_mults
-                
+
                 if embedding is None:
                     remade_tokens.append(token)
                     multipliers.append(weight)
@@ -222,7 +230,6 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
             batch_multipliers.append(multipliers)
 
         return batch_multipliers, remade_batch_tokens, used_custom_terms, hijack_comments, hijack_fixes, token_count
-
 
     def process_text_old(self, text):
         id_start = self.wrapped.tokenizer.bos_token_id
@@ -280,7 +287,7 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
 
                 token_count = len(remade_tokens)
                 remade_tokens = remade_tokens + [id_end] * (maxlen - 2 - len(remade_tokens))
-                remade_tokens = [id_start] + remade_tokens[0:maxlen-2] + [id_end]
+                remade_tokens = [id_start] + remade_tokens[0:maxlen - 2] + [id_end]
                 cache[tuple_tokens] = (remade_tokens, fixes, multipliers)
 
             multipliers = multipliers + [1.0] * (maxlen - 2 - len(multipliers))
@@ -349,6 +356,51 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
         tokens = torch.asarray(remade_batch_tokens).to(device)
         outputs = self.wrapped.transformer(input_ids=tokens, output_hidden_states=-opts.CLIP_stop_at_last_layers)
 
+        if use_old:
+            self.hijack.fixes = hijack_fixes
+            return self.process_tokens(remade_batch_tokens, batch_multipliers)
+
+        z = None
+        i = 0
+        while max(map(len, remade_batch_tokens)) != 0:
+            rem_tokens = [x[75:] for x in remade_batch_tokens]
+            rem_multipliers = [x[75:] for x in batch_multipliers]
+
+            self.hijack.fixes = []
+            for unfiltered in hijack_fixes:
+                fixes = []
+                for fix in unfiltered:
+                    if fix[0] == i:
+                        fixes.append(fix[1])
+                self.hijack.fixes.append(fixes)
+
+            tokens = []
+            multipliers = []
+            for j in range(len(remade_batch_tokens)):
+                if len(remade_batch_tokens[j]) > 0:
+                    tokens.append(remade_batch_tokens[j][:75])
+                    multipliers.append(batch_multipliers[j][:75])
+                else:
+                    tokens.append([self.wrapped.tokenizer.eos_token_id] * 75)
+                    multipliers.append([1.0] * 75)
+
+            z1 = self.process_tokens(tokens, multipliers)
+            z = z1 if z is None else torch.cat((z, z1), axis=-2)
+
+            remade_batch_tokens = rem_tokens
+            batch_multipliers = rem_multipliers
+            i += 1
+
+        return z
+
+    def process_tokens(self, remade_batch_tokens, batch_multipliers):
+        if not opts.use_old_emphasis_implementation:
+            remade_batch_tokens = [[self.wrapped.tokenizer.bos_token_id] + x[:75] + [self.wrapped.tokenizer.eos_token_id] for x in remade_batch_tokens]
+            batch_multipliers = [[1.0] + x[:75] + [1.0] for x in batch_multipliers]
+
+        tokens = torch.asarray(remade_batch_tokens).to(device)
+        outputs = self.wrapped.transformer(input_ids=tokens, output_hidden_states=-opts.CLIP_stop_at_last_layers)
+
         if opts.CLIP_stop_at_last_layers > 1:
             z = outputs.hidden_states[-opts.CLIP_stop_at_last_layers]
             z = self.wrapped.transformer.text_model.final_layer_norm(z)
@@ -385,8 +437,8 @@ class EmbeddingsWithFixes(torch.nn.Module):
         for fixes, tensor in zip(batch_fixes, inputs_embeds):
             for offset, embedding in fixes:
                 emb = embedding.vec
-                emb_len = min(tensor.shape[0]-offset-1, emb.shape[0])
-                tensor = torch.cat([tensor[0:offset+1], emb[0:emb_len], tensor[offset+1+emb_len:]])
+                emb_len = min(tensor.shape[0] - offset - 1, emb.shape[0])
+                tensor = torch.cat([tensor[0:offset + 1], emb[0:emb_len], tensor[offset + 1 + emb_len:]])
 
             vecs.append(tensor)
 
@@ -403,3 +455,23 @@ def add_circular_option_to_conv_2d():
 
 
 model_hijack = StableDiffusionModelHijack()
+
+
+def register_buffer(self, name, attr):
+    """
+    Fix register buffer bug for Mac OS.
+    """
+
+    if type(attr) == torch.Tensor:
+        if attr.device != devices.device:
+
+            if devices.has_mps():
+                attr = attr.to(device="mps", dtype=torch.float32)
+            else:
+                attr = attr.to(devices.device)
+
+    setattr(self, name, attr)
+
+
+ldm.models.diffusion.ddim.DDIMSampler.register_buffer = register_buffer
+ldm.models.diffusion.plms.PLMSSampler.register_buffer = register_buffer

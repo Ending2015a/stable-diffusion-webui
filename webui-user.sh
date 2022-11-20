@@ -40,4 +40,7 @@ export REQS_FILE="requirements.txt"
 #export CODEFORMER_COMMIT_HASH=""
 #export BLIP_COMMIT_HASH=""
 
+# Uncomment to enable accelerated launch
+#export ACCELERATE="True"
+
 ###########################################
