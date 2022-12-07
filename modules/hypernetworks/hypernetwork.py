@@ -1,48 +1,10 @@
-<<<<<<< HEAD
-=======
 import csv
->>>>>>> AUTOMATIC1111-master
 import datetime
 import glob
 import html
 import os
 import sys
 import traceback
-<<<<<<< HEAD
-import tqdm
-
-import torch
-
-from ldm.util import default
-from modules import devices, shared, processing, sd_models
-import torch
-from torch import einsum
-from einops import rearrange, repeat
-import modules.textual_inversion.dataset
-from modules.textual_inversion.learn_schedule import LearnRateScheduler
-
-
-class HypernetworkModule(torch.nn.Module):
-    def __init__(self, dim, state_dict=None):
-        super().__init__()
-
-        self.linear1 = torch.nn.Linear(dim, dim * 2)
-        self.linear2 = torch.nn.Linear(dim * 2, dim)
-
-        if state_dict is not None:
-            self.load_state_dict(state_dict, strict=True)
-        else:
-
-            self.linear1.weight.data.normal_(mean=0.0, std=0.01)
-            self.linear1.bias.data.zero_()
-            self.linear2.weight.data.normal_(mean=0.0, std=0.01)
-            self.linear2.bias.data.zero_()
-
-        self.to(devices.device)
-
-    def forward(self, x):
-        return x + (self.linear2(self.linear1(x)))
-=======
 import inspect
 
 import modules.textual_inversion.dataset
@@ -162,29 +124,19 @@ class HypernetworkModule(torch.nn.Module):
 
 def apply_strength(value=None):
     HypernetworkModule.multiplier = value if value is not None else shared.opts.sd_hypernetwork_strength
->>>>>>> AUTOMATIC1111-master
 
 
 class Hypernetwork:
     filename = None
     name = None
 
-<<<<<<< HEAD
-    def __init__(self, name=None, enable_sizes=None):
-=======
     def __init__(self, name=None, enable_sizes=None, layer_structure=None, activation_func=None, weight_init=None, add_layer_norm=False, use_dropout=False, activate_output=False, **kwargs):
->>>>>>> AUTOMATIC1111-master
         self.filename = None
         self.name = name
         self.layers = {}
         self.step = 0
         self.sd_checkpoint = None
         self.sd_checkpoint_name = None
-<<<<<<< HEAD
-
-        for size in enable_sizes or []:
-            self.layers[size] = (HypernetworkModule(size), HypernetworkModule(size))
-=======
         self.layer_structure = layer_structure
         self.activation_func = activation_func
         self.weight_init = weight_init
@@ -202,7 +154,6 @@ class Hypernetwork:
                 HypernetworkModule(size, None, self.layer_structure, self.activation_func, self.weight_init,
                                    self.add_layer_norm, self.use_dropout, self.activate_output, last_layer_dropout=self.last_layer_dropout),
             )
->>>>>>> AUTOMATIC1111-master
 
     def weights(self):
         res = []
@@ -210,32 +161,19 @@ class Hypernetwork:
         for k, layers in self.layers.items():
             for layer in layers:
                 layer.train()
-<<<<<<< HEAD
-                res += [layer.linear1.weight, layer.linear1.bias, layer.linear2.weight, layer.linear2.bias]
-=======
                 res += layer.trainables()
->>>>>>> AUTOMATIC1111-master
 
         return res
 
     def save(self, filename):
-        state_dict = {}
-<<<<<<< HEAD
-=======
+
         optimizer_saved_dict = {}
->>>>>>> AUTOMATIC1111-master
 
         for k, v in self.layers.items():
             state_dict[k] = (v[0].state_dict(), v[1].state_dict())
 
         state_dict['step'] = self.step
         state_dict['name'] = self.name
-<<<<<<< HEAD
-        state_dict['sd_checkpoint'] = self.sd_checkpoint
-        state_dict['sd_checkpoint_name'] = self.sd_checkpoint_name
-
-        torch.save(state_dict, filename)
-=======
         state_dict['layer_structure'] = self.layer_structure
         state_dict['activation_func'] = self.activation_func
         state_dict['is_layer_norm'] = self.add_layer_norm
@@ -254,7 +192,6 @@ class Hypernetwork:
             optimizer_saved_dict['hash'] = sd_models.model_hash(filename)
             optimizer_saved_dict['optimizer_state_dict'] = self.optimizer_state_dict
             torch.save(optimizer_saved_dict, filename + '.optim')
->>>>>>> AUTOMATIC1111-master
 
     def load(self, filename):
         self.filename = filename
@@ -263,11 +200,6 @@ class Hypernetwork:
 
         state_dict = torch.load(filename, map_location='cpu')
 
-<<<<<<< HEAD
-        for size, sd in state_dict.items():
-            if type(size) == int:
-                self.layers[size] = (HypernetworkModule(size, sd[0]), HypernetworkModule(size, sd[1]))
-=======
         self.layer_structure = state_dict.get('layer_structure', [1, 2, 1])
         print(self.layer_structure)
         self.activation_func = state_dict.get('activation_func', None)
@@ -302,7 +234,6 @@ class Hypernetwork:
                     HypernetworkModule(size, sd[1], self.layer_structure, self.activation_func, self.weight_init,
                                        self.add_layer_norm, self.use_dropout, self.activate_output, last_layer_dropout=self.last_layer_dropout),
                 )
->>>>>>> AUTOMATIC1111-master
 
         self.name = state_dict.get('name', self.name)
         self.step = state_dict.get('step', 0)
@@ -312,28 +243,18 @@ class Hypernetwork:
 
 def list_hypernetworks(path):
     res = {}
-<<<<<<< HEAD
-    for filename in glob.iglob(os.path.join(path, '**/*.pt'), recursive=True):
-        name = os.path.splitext(os.path.basename(filename))[0]
-        res[name] = filename
-=======
     for filename in sorted(glob.iglob(os.path.join(path, '**/*.pt'), recursive=True)):
         name = os.path.splitext(os.path.basename(filename))[0]
         # Prevent a hypothetical "None.pt" from being listed.
         if name != "None":
             res[name + f"({sd_models.model_hash(filename)})"] = filename
->>>>>>> AUTOMATIC1111-master
     return res
 
 
 def load_hypernetwork(filename):
     path = shared.hypernetworks.get(filename, None)
-<<<<<<< HEAD
-    if path is not None:
-=======
     # Prevent any file named "None.pt" from being loaded.
     if path is not None and filename != "None":
->>>>>>> AUTOMATIC1111-master
         print(f"Loading hypernetwork {filename}")
         try:
             shared.loaded_hypernetwork = Hypernetwork()
@@ -403,10 +324,7 @@ def attention_CrossAttention_forward(self, x, context=None, mask=None):
     return self.to_out(out)
 
 
-<<<<<<< HEAD
-def train_hypernetwork(hypernetwork_name, learn_rate, data_root, log_directory, steps, create_image_every, save_hypernetwork_every, template_file, preview_image_prompt):
-    assert hypernetwork_name, 'hypernetwork not selected'
-=======
+
 def stack_conds(conds):
     if len(conds) == 1:
         return torch.stack(conds)
@@ -457,7 +375,6 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
     save_hypernetwork_every = save_hypernetwork_every or 0
     create_image_every = create_image_every or 0
     textual_inversion.validate_train_inputs(hypernetwork_name, learn_rate, batch_size, data_root, template_file, steps, save_hypernetwork_every, create_image_every, log_directory, name="hypernetwork")
->>>>>>> AUTOMATIC1111-master
 
     path = shared.hypernetworks.get(hypernetwork_name, None)
     shared.loaded_hypernetwork = Hypernetwork()
@@ -466,10 +383,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
     shared.state.textinfo = "Initializing hypernetwork training..."
     shared.state.job_count = steps
 
-<<<<<<< HEAD
-=======
     hypernetwork_name = hypernetwork_name.rsplit('(', 1)[0]
->>>>>>> AUTOMATIC1111-master
     filename = os.path.join(shared.cmd_opts.hypernetwork_dir, f'{hypernetwork_name}.pt')
 
     log_directory = os.path.join(log_directory, datetime.datetime.now().strftime("%Y-%m-%d"), hypernetwork_name)
@@ -487,11 +401,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
     else:
         images_dir = None
 
-<<<<<<< HEAD
-    shared.state.textinfo = f"Preparing dataset from {html.escape(data_root)}..."
-    with torch.autocast("cuda"):
-        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=512, height=512, repeats=1, placeholder_token=hypernetwork_name, model=shared.sd_model, device=devices.device, template_file=template_file, include_cond=True)
-=======
+
     hypernetwork = shared.loaded_hypernetwork
     checkpoint = sd_models.select_checkpoint()
 
@@ -506,45 +416,22 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
     shared.state.textinfo = f"Preparing dataset from {html.escape(data_root)}..."
     with torch.autocast("cuda"):
         ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared.opts.training_image_repeats_per_epoch, placeholder_token=hypernetwork_name, model=shared.sd_model, device=devices.device, template_file=template_file, include_cond=True, batch_size=batch_size)
->>>>>>> AUTOMATIC1111-master
 
     if unload:
         shared.sd_model.cond_stage_model.to(devices.cpu)
         shared.sd_model.first_stage_model.to(devices.cpu)
 
-<<<<<<< HEAD
-    hypernetwork = shared.loaded_hypernetwork
-=======
+
     size = len(ds.indexes)
     loss_dict = defaultdict(lambda : deque(maxlen = 1024))
     losses = torch.zeros((size,))
     previous_mean_losses = [0]
     previous_mean_loss = 0
     print("Mean loss of {} elements".format(size))
-    
->>>>>>> AUTOMATIC1111-master
     weights = hypernetwork.weights()
     for weight in weights:
         weight.requires_grad = True
 
-<<<<<<< HEAD
-    losses = torch.zeros((32,))
-
-    last_saved_file = "<none>"
-    last_saved_image = "<none>"
-
-    ititial_step = hypernetwork.step or 0
-    if ititial_step > steps:
-        return hypernetwork, filename
-
-    scheduler = LearnRateScheduler(learn_rate, steps, ititial_step)
-    optimizer = torch.optim.AdamW(weights, lr=scheduler.learn_rate)
-
-    pbar = tqdm.tqdm(enumerate(ds), total=steps - ititial_step)
-    for i, entry in pbar:
-        hypernetwork.step = i + ititial_step
-
-=======
     # Here we use optimizer from saved HN, or we can specify as UI option.
     if hypernetwork.optimizer_name in optimizer_dict:
         optimizer = optimizer_dict[hypernetwork.optimizer_name](params=weights, lr=scheduler.learn_rate)
@@ -573,8 +460,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
         if len(loss_dict) > 0:
             previous_mean_losses = [i[-1] for i in loss_dict.values()]
             previous_mean_loss = mean(previous_mean_losses)
-            
->>>>>>> AUTOMATIC1111-master
+
         scheduler.apply(optimizer, hypernetwork.step)
         if scheduler.finished:
             break
@@ -583,30 +469,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
             break
 
         with torch.autocast("cuda"):
-<<<<<<< HEAD
-            cond = entry.cond.to(devices.device)
-            x = entry.latent.to(devices.device)
-            loss = shared.sd_model(x.unsqueeze(0), cond)[0]
-            del x
-            del cond
 
-            losses[hypernetwork.step % losses.shape[0]] = loss.item()
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        pbar.set_description(f"loss: {losses.mean():.7f}")
-
-        if hypernetwork.step > 0 and hypernetwork_dir is not None and hypernetwork.step % save_hypernetwork_every == 0:
-            last_saved_file = os.path.join(hypernetwork_dir, f'{hypernetwork_name}-{hypernetwork.step}.pt')
-            hypernetwork.save(last_saved_file)
-
-        if hypernetwork.step > 0 and images_dir is not None and hypernetwork.step % create_image_every == 0:
-            last_saved_image = os.path.join(images_dir, f'{hypernetwork_name}-{hypernetwork.step}.png')
-
-            preview_text = entry.cond_text if preview_image_prompt == "" else preview_image_prompt
-=======
             c = stack_conds([entry.cond for entry in entries]).to(devices.device)
             # c = torch.vstack([entry.cond for entry in entries]).to(devices.device)
             x = torch.stack([entry.latent for entry in entries]).to(devices.device)
@@ -660,7 +523,6 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
         if images_dir is not None and steps_done % create_image_every == 0:
             forced_filename = f'{hypernetwork_name}-{steps_done}'
             last_saved_image = os.path.join(images_dir, forced_filename)
->>>>>>> AUTOMATIC1111-master
 
             optimizer.zero_grad()
             shared.sd_model.cond_stage_model.to(devices.device)
@@ -668,17 +530,10 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
             p = processing.StableDiffusionProcessingTxt2Img(
                 sd_model=shared.sd_model,
-<<<<<<< HEAD
-                prompt=preview_text,
-                steps=20,
-=======
->>>>>>> AUTOMATIC1111-master
                 do_not_save_grid=True,
                 do_not_save_samples=True,
             )
 
-<<<<<<< HEAD
-=======
             if preview_from_txt2img:
                 p.prompt = preview_prompt
                 p.negative_prompt = preview_negative_prompt
@@ -694,7 +549,6 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
             preview_text = p.prompt
 
->>>>>>> AUTOMATIC1111-master
             processed = processing.process_images(p)
             image = processed.images[0] if len(processed.images)>0 else None
 
@@ -704,36 +558,14 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
             if image is not None:
                 shared.state.current_image = image
-<<<<<<< HEAD
-                image.save(last_saved_image)
-=======
                 last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
->>>>>>> AUTOMATIC1111-master
+
                 last_saved_image += f", prompt: {preview_text}"
 
         shared.state.job_no = hypernetwork.step
 
         shared.state.textinfo = f"""
 <p>
-<<<<<<< HEAD
-Loss: {losses.mean():.7f}<br/>
-Step: {hypernetwork.step}<br/>
-Last prompt: {html.escape(entry.cond_text)}<br/>
-Last saved embedding: {html.escape(last_saved_file)}<br/>
-Last saved image: {html.escape(last_saved_image)}<br/>
-</p>
-"""
-
-    checkpoint = sd_models.select_checkpoint()
-
-    hypernetwork.sd_checkpoint = checkpoint.hash
-    hypernetwork.sd_checkpoint_name = checkpoint.model_name
-    hypernetwork.save(filename)
-
-    return hypernetwork, filename
-
-
-=======
 Loss: {previous_mean_loss:.7f}<br/>
 Step: {hypernetwork.step}<br/>
 Last prompt: {html.escape(entries[0].cond_text)}<br/>
@@ -767,4 +599,3 @@ def save_hypernetwork(hypernetwork, checkpoint, hypernetwork_name, filename):
         hypernetwork.sd_checkpoint_name = old_sd_checkpoint_name
         hypernetwork.name = old_hypernetwork_name
         raise
->>>>>>> AUTOMATIC1111-master

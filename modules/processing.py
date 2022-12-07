@@ -443,10 +443,6 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     else:
         assert p.prompt is not None
 
-    with open(os.path.join(shared.script_path, "params.txt"), "w", encoding="utf8") as file:
-        processed = Processed(p, [], p.seed, "")
-        file.write(processed.infotext(p, 0))
-
     devices.torch_gc()
 
     seed = get_fixed_seed(p.seed)
@@ -532,7 +528,6 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             with devices.autocast():
                 samples_ddim = p.sample(conditioning=c, unconditional_conditioning=uc, seeds=seeds, subseeds=subseeds, subseed_strength=p.subseed_strength, prompts=prompts)
 
-
             samples_ddim = samples_ddim.to(devices.dtype_vae)
             x_samples_ddim = decode_first_stage(p.sd_model, samples_ddim)
             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
@@ -596,7 +591,6 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if opts.return_grid:
                 text = infotext()
                 infotexts.insert(0, text)
-                
                 if opts.enable_pnginfo:
                     grid.info["parameters"] = text
                 output_images.insert(0, grid)
@@ -688,7 +682,6 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                 save_intermediate(samples, i)
 
             samples = torch.nn.functional.interpolate(samples, size=(self.height // opt_f, self.width // opt_f), mode="bilinear")
-
 
             # Avoid making the inpainting conditioning unless necessary as 
             # this does need some extra compute to decode / encode the image again.
